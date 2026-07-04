@@ -1,0 +1,26 @@
+[
+    {
+        "name": "wheat",
+        "variety": "Lokwan",
+        "duration_days": 120,
+        "sowing_window": "Nov-Dec"
+    },
+    {
+        "name": "rice",
+        "variety": "Basmati",
+        "duration_days": 140,
+        "sowing_window": "Jun-Jul"
+    },
+    {
+        "name": "cotton",
+        "variety": "Bt Cotton",
+        "duration_days": 160,
+        "sowing_window": "May-Jun"
+    },
+    {
+        "name": "sugarcane",
+        "variety": "Co 86032",
+        "duration_days": 365,
+        "sowing_window": "Oct-Nov"
+    }
+]

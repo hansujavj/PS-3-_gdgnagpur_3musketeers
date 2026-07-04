@@ -1,0 +1,57 @@
+{
+    "common": {
+        "loading": "Loading...",
+        "error": "Something went wrong",
+        "save": "Save",
+        "cancel": "Cancel",
+        "submit": "Submit"
+    },
+    "nav": {
+        "home": "Home",
+        "crop": "My Crops",
+        "soil": "Soil Info",
+        "disease": "Heal",
+        "insights": "48h Insights",
+        "settings": "Settings"
+    },
+    "soil": {
+        "edit_type": "Change Soil Type",
+        "current": "Current Soil",
+        "select": "Select Soil Type",
+        "save_success": "Soil preference saved!"
+    },
+    "home": {
+        "welcome": "Welcome back",
+        "weather": "Current Weather",
+        "alerts_title": "Urgent Alerts",
+        "no_alerts": "No urgent alerts. Good job!",
+        "view_all": "View All"
+    },
+    "disease": {
+        "title": "Plant Clinic",
+        "step1_title": "Select Your Crop",
+        "step1_subtitle": "Choose the crop that is affected",
+        "step2_title": "Select Symptoms",
+        "change_crop": "Change Crop",
+        "diagnose_btn": "Diagnose Problem",
+        "results_title": "Diagnosis Results",
+        "start_new": "Start New Diagnosis",
+        "no_match": "No matching diseases found",
+        "organic_treatment": "Organic Treatment",
+        "chemical_treatment": "Chemical Treatment",
+        "prevention": "Prevention",
+        "expert_help": "Need Expert Help?",
+        "season": "Common in",
+        "take_photo": "Take Photo",
+        "upload_gallery": "Upload from Gallery",
+        "analyzing": "Analyzing crop health...",
+        "no_issues": "No diseases detected. Your crop looks healthy!",
+        "detected": "Disease Detected"
+    },
+    "settings": {
+        "title": "Settings",
+        "language": "Language",
+        "offline_mode": "Offline Mode",
+        "profile": "Profile"
+    }
+}

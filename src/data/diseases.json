@@ -1,0 +1,266 @@
+{
+    "wheat": [
+        {
+            "id": "wheat_rust",
+            "name": "Leaf Rust",
+            "type": "disease",
+            "symptoms": [
+                "Orange-brown pustules on leaves",
+                "Yellow spots around pustules",
+                "Premature leaf drying"
+            ],
+            "causes": "Fungal infection (Puccinia triticina)",
+            "treatment": {
+                "organic": "Remove infected leaves. Apply neem oil spray.",
+                "chemical": "Spray Propiconazole or Tebuconazole fungicide.",
+                "preventive": "Use resistant varieties. Avoid excessive nitrogen fertilizer."
+            },
+            "severity": "high",
+            "season": "Winter (Dec-Feb)"
+        },
+        {
+            "id": "wheat_blight",
+            "name": "Leaf Blight",
+            "type": "disease",
+            "symptoms": [
+                "Brown lesions on leaves",
+                "Drying from leaf tips",
+                "Oval-shaped spots"
+            ],
+            "causes": "Fungal infection (Bipolaris sorokiniana)",
+            "treatment": {
+                "organic": "Crop rotation with non-cereal crops.",
+                "chemical": "Use Mancozeb or Carbendazim spray.",
+                "preventive": "Seed treatment before sowing. Proper drainage."
+            },
+            "severity": "medium",
+            "season": "Late winter"
+        },
+        {
+            "id": "wheat_aphid",
+            "name": "Aphids",
+            "type": "pest",
+            "symptoms": [
+                "Small green insects on leaves",
+                "Sticky honeydew on plants",
+                "Curled leaves"
+            ],
+            "causes": "Aphid infestation",
+            "treatment": {
+                "organic": "Spray neem oil or soap water. Introduce ladybugs.",
+                "chemical": "Use Imidacloprid or Dimethoate insecticide.",
+                "preventive": "Monitor regularly. Remove weeds around field."
+            },
+            "severity": "medium",
+            "season": "Feb-March"
+        }
+    ],
+    "rice": [
+        {
+            "id": "rice_blast",
+            "name": "Blast Disease",
+            "type": "disease",
+            "symptoms": [
+                "Diamond-shaped spots on leaves",
+                "Gray center with brown border",
+                "Neck rot in severe cases"
+            ],
+            "causes": "Fungal infection (Pyricularia oryzae)",
+            "treatment": {
+                "organic": "Use silicon-rich fertilizers. Burn infected stubble.",
+                "chemical": "Spray Tricyclazole or Carbendazim.",
+                "preventive": "Avoid excessive nitrogen. Use resistant varieties."
+            },
+            "severity": "high",
+            "season": "Monsoon (July-Sep)"
+        },
+        {
+            "id": "rice_blight",
+            "name": "Bacterial Leaf Blight",
+            "type": "disease",
+            "symptoms": [
+                "Yellow to white lesions",
+                "Wavy leaf margins",
+                "Milky bacterial ooze"
+            ],
+            "causes": "Bacterial infection (Xanthomonas oryzae)",
+            "treatment": {
+                "organic": "No effective organic treatment. Remove infected plants.",
+                "chemical": "Spray Streptocycline or Copper oxychloride.",
+                "preventive": "Use certified seeds. Avoid deep water."
+            },
+            "severity": "high",
+            "season": "Monsoon"
+        },
+        {
+            "id": "rice_stemBorer",
+            "name": "Stem Borer",
+            "type": "pest",
+            "symptoms": [
+                "Dead hearts in vegetative stage",
+                "White ears in reproductive stage",
+                "Holes in stem"
+            ],
+            "causes": "Caterpillar boring into stem",
+            "treatment": {
+                "organic": "Use pheromone traps. Release Trichogramma wasps.",
+                "chemical": "Apply Cartap hydrochloride or Chlorpyrifos.",
+                "preventive": "Remove stubble after harvest. Avoid staggered planting."
+            },
+            "severity": "high",
+            "season": "Throughout crop season"
+        }
+    ],
+    "cotton": [
+        {
+            "id": "cotton_bollworm",
+            "name": "Bollworm",
+            "type": "pest",
+            "symptoms": [
+                "Holes in bolls",
+                "Caterpillars inside flowers",
+                "Damaged squares and bolls"
+            ],
+            "causes": "Helicoverpa armigera larvae",
+            "treatment": {
+                "organic": "Hand-pick larvae. Use NPV (Nuclear Polyhedrosis Virus).",
+                "chemical": "Spray Emamectin benzoate or Spinosad.",
+                "preventive": "Grow Bt cotton. Use pheromone traps."
+            },
+            "severity": "high",
+            "season": "Flowering stage"
+        },
+        {
+            "id": "cotton_wilt",
+            "name": "Wilt Disease",
+            "type": "disease",
+            "symptoms": [
+                "Sudden wilting of plants",
+                "Yellow leaves",
+                "Brown vascular tissue"
+            ],
+            "causes": "Fungal infection (Fusarium oxysporum)",
+            "treatment": {
+                "organic": "Soil solarization. Use Trichoderma.",
+                "chemical": "Soil drenching with Carbendazim.",
+                "preventive": "Crop rotation. Use resistant varieties."
+            },
+            "severity": "high",
+            "season": "Early growth stage"
+        }
+    ],
+    "tomato": [
+        {
+            "id": "tomato_blight",
+            "name": "Late Blight",
+            "type": "disease",
+            "symptoms": [
+                "Dark brown spots on leaves",
+                "White mold on underside",
+                "Fruit rot"
+            ],
+            "causes": "Fungal infection (Phytophthora infestans)",
+            "treatment": {
+                "organic": "Remove infected parts. Improve air circulation.",
+                "chemical": "Spray Mancozeb or Metalaxyl.",
+                "preventive": "Avoid overhead watering. Use resistant varieties."
+            },
+            "severity": "high",
+            "season": "Humid weather"
+        },
+        {
+            "id": "tomato_whitefly",
+            "name": "Whitefly",
+            "type": "pest",
+            "symptoms": [
+                "Tiny white insects under leaves",
+                "Yellow sticky leaves",
+                "Stunted growth"
+            ],
+            "causes": "Whitefly infestation",
+            "treatment": {
+                "organic": "Yellow sticky traps. Neem oil spray.",
+                "chemical": "Use Thiamethoxam or Acetamiprid.",
+                "preventive": "Remove weeds. Use reflective mulch."
+            },
+            "severity": "medium",
+            "season": "Throughout season"
+        }
+    ],
+    "sugarcane": [
+        {
+            "id": "sugarcane_redRot",
+            "name": "Red Rot",
+            "type": "disease",
+            "symptoms": [
+                "Reddening of internal tissue",
+                "Drying of leaves from top",
+                "Foul smell from stem"
+            ],
+            "causes": "Fungal infection (Colletotrichum falcatum)",
+            "treatment": {
+                "organic": "Remove and burn infected plants.",
+                "chemical": "Treat setts with Carbendazim before planting.",
+                "preventive": "Use disease-free setts. Avoid waterlogging."
+            },
+            "severity": "high",
+            "season": "Monsoon"
+        },
+        {
+            "id": "sugarcane_borer",
+            "name": "Top Borer",
+            "type": "pest",
+            "symptoms": [
+                "Dead hearts",
+                "Bunchy top appearance",
+                "Holes in growing point"
+            ],
+            "causes": "Scirpophaga excerptalis larvae",
+            "treatment": {
+                "organic": "Remove and destroy dead hearts.",
+                "chemical": "Apply Cartap hydrochloride granules.",
+                "preventive": "Avoid late planting. Destroy stubble."
+            },
+            "severity": "medium",
+            "season": "Early growth"
+        }
+    ],
+    "general": [
+        {
+            "id": "nutrient_nitrogen",
+            "name": "Nitrogen Deficiency",
+            "type": "deficiency",
+            "symptoms": [
+                "Yellowing of older leaves",
+                "Stunted growth",
+                "Pale green color"
+            ],
+            "causes": "Lack of nitrogen in soil",
+            "treatment": {
+                "organic": "Apply compost or vermicompost. Use green manure.",
+                "chemical": "Apply Urea fertilizer (46% N).",
+                "preventive": "Regular soil testing. Balanced fertilization."
+            },
+            "severity": "medium",
+            "season": "Any time"
+        },
+        {
+            "id": "nutrient_phosphorus",
+            "name": "Phosphorus Deficiency",
+            "type": "deficiency",
+            "symptoms": [
+                "Purple or dark green leaves",
+                "Poor root development",
+                "Delayed maturity"
+            ],
+            "causes": "Lack of phosphorus",
+            "treatment": {
+                "organic": "Apply bone meal or rock phosphate.",
+                "chemical": "Use DAP (Diammonium Phosphate) or SSP.",
+                "preventive": "Maintain soil pH 6-7. Add organic matter."
+            },
+            "severity": "medium",
+            "season": "Early growth"
+        }
+    ]
+}
