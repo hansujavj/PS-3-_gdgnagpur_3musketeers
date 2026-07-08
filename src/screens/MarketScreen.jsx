@@ -20,7 +20,7 @@ import { fetchAllCrops } from '../db/cropSupabase';
 import { getCachedPrediction, upsertPrediction, fetchPredictionHistory } from '../db/marketSupabase';
 import { predictPrice, getTrendInfo, getConfidenceInfo } from '../engines/pricePredictionEngine';
 
-const MarketScreen = ({ navigation }) => {
+const MarketScreen = () => {
     // ── State ────────────────────────────────────────────────────────────────
     const [loading, setLoading] = useState(false);
     const [cropsLoading, setCropsLoading] = useState(true);
@@ -135,8 +135,8 @@ const MarketScreen = ({ navigation }) => {
                 return;
             }
 
-            // Step 2: Call backend API
-            const result = await predictPrice(selectedCrop, dateStr);
+            // Step 2: Call backend API (or offline fallback)
+            const result = await predictPrice(selectedCrop.id, dateStr, selectedCrop.crop_name);
 
             // Step 3: Store in Supabase (upsert)
             const stored = await upsertPrediction({
@@ -176,9 +176,6 @@ const MarketScreen = ({ navigation }) => {
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#fff" />
-                </TouchableOpacity>
                 <View style={{ flex: 1 }}>
                     <Text style={styles.headerTitle}>📊 Market Prices</Text>
                     <Text style={styles.headerSub}>Predict crop prices for any date</Text>

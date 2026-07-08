@@ -9,8 +9,11 @@ import { HarvestOrchestrator } from '../engines/harvestOrchestrator';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
+import Constants from 'expo-constants';
 import DAILY_TIPS from '../data/dailyTips.json';
-import { getCropTimeline, getUpcomingTasks, getHarvestInfo, getCropData, getRecommendation } from '../data/cropDatabase';
+// crop database helpers removed from home screen since sections hidden
+// import { getCropTimeline, getUpcomingTasks, getHarvestInfo, getCropData, getRecommendation } from '../data/cropDatabase';
 import { fetchLatestCommunityPosts } from '../db/communitySupabase';
 import CropClinicWidget from '../components/CropClinicWidget';
 
@@ -21,6 +24,47 @@ const Illustrations = {
     harvest: require('../../assets/illustrations/harvest.png'),
     seedling: require('../../assets/illustrations/seedling.png'),
     vegetative: require('../../assets/illustrations/vegetative.png'),
+};
+
+const getGeocodingApiKey = () =>
+    Constants.expoConfig?.extra?.GOOGLE_GEOCODING_API_KEY
+    || process.env.GOOGLE_GEOCODING_API_KEY
+    || '';
+
+const reverseGeocodeFarmLocation = async (latitude, longitude) => {
+    if (!latitude || !longitude) return '';
+
+    const fallbackCoords = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    const apiKey = getGeocodingApiKey();
+
+    if (apiKey) {
+        try {
+            const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}&language=en`;
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.status === 'OK' && data.results?.length > 0) {
+                return data.results[0].formatted_address;
+            }
+        } catch (error) {
+            console.warn('Google reverse geocoding failed on home screen:', error);
+        }
+    }
+
+    try {
+        const results = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (results?.length > 0) {
+            const place = results[0];
+            return [
+                place.name,
+                place.subregion || place.city || place.district,
+                place.region,
+            ].filter(Boolean).join(', ');
+        }
+    } catch (error) {
+        console.warn('Device reverse geocoding failed on home screen:', error);
+    }
+
+    return fallbackCoords;
 };
 
 const HomeScreen = () => {
@@ -62,8 +106,15 @@ const HomeScreen = () => {
                 const farmStr = await AsyncStorage.getItem('farm-details');
                 if (farmStr) {
                     const farm = JSON.parse(farmStr);
-                    setFarmLocation(farm);
                     farmCoords = { latitude: farm.latitude, longitude: farm.longitude };
+
+                    if (!farm.formatted_address && farm.latitude && farm.longitude) {
+                        const formattedAddress = await reverseGeocodeFarmLocation(farm.latitude, farm.longitude);
+                        farm.formatted_address = formattedAddress;
+                        await AsyncStorage.setItem('farm-details', JSON.stringify(farm));
+                    }
+
+                    setFarmLocation(farm);
                 }
             } catch (e) {
                 console.warn('Failed to load farm location:', e);
@@ -179,16 +230,17 @@ const HomeScreen = () => {
         return severity === 'high' ? '#d32f2f' : '#f57c00';
     };
 
-    const renderQuickAction = (icon, label, route) => (
+    const renderQuickAction = (icon, label, route, bgColors, iconColor) => (
         <TouchableOpacity
-            style={styles.actionBtn}
+            style={styles.quickActionTile}
             onPress={() => navigation.navigate(route)}
             accessibilityLabel={`Navigate to ${label}`}
+            activeOpacity={0.8}
         >
-            <View style={styles.actionIconBox}>
-                <Ionicons name={icon} size={24} color="#2e7d32" />
+            <View style={[styles.quickActionIconShell, { backgroundColor: bgColors[0] }]}>
+                <Ionicons name={icon} size={28} color={iconColor} />
             </View>
-            <Text style={styles.actionLabel}>{label}</Text>
+            <Text style={styles.quickActionLabel}>{label}</Text>
         </TouchableOpacity>
     );
 
@@ -217,220 +269,114 @@ const HomeScreen = () => {
             style={styles.container}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadData} />}
         >
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerTop}>
-                    <View style={styles.branding}>
-                        <Text style={styles.appName}>AgriChain</Text>
-                        <View style={styles.badge}><Text style={styles.badgeText}>BETA</Text></View>
+            {/* 1. Top Weather/Info Card */}
+            <View style={styles.topGlassCard}>
+                <View style={styles.glassHeaderRow}>
+                    <View style={styles.glassBranding}>
+                        <Text style={styles.glassAppName}>AgriChain</Text>
+                        <View style={styles.glassBadge}><Text style={styles.glassBadgeText}>PRO</Text></View>
                     </View>
                     <TouchableOpacity
                         onPress={() => setNotifVisible(true)}
-                        style={styles.bellBtn}
-                        accessibilityLabel="View notifications"
-                        accessibilityHint="Opens notification panel"
+                        style={styles.glassBellBtn}
                     >
-                        <Ionicons name="notifications" size={26} color="#fff" />
+                        <Ionicons name="notifications-outline" size={26} color="#fff" />
                         {unreadCount > 0 && (
-                            <View style={styles.redDot}>
+                            <View style={styles.glassRedDot}>
                                 <Text style={styles.dotText}>{unreadCount}</Text>
                             </View>
                         )}
                     </TouchableOpacity>
                 </View>
-                <View>
-                    <Text style={styles.greeting}>Welcome back, {userName}!</Text>
-                    <Text style={styles.location}>
-                        📍 {farmLocation?.formatted_address
+
+                <View style={styles.glassGreetingRow}>
+                    <Text style={styles.glassGreeting}>Hi, {userName} 👋</Text>
+                    <Text style={styles.glassLocation} numberOfLines={1}>
+                        <Ionicons name="location" size={16} color="#4ade80" /> {farmLocation?.formatted_address
                             ? farmLocation.formatted_address
-                            : region
-                                ? `${region.district}, ${region.state}`
-                                : 'Locating...'}
+                            : region ? `${region.district}, ${region.state}` : 'Locating...'}
                     </Text>
                 </View>
-            </View>
 
-            {/* Weather Card */}
-            <View style={styles.card}>
-                <View style={styles.weatherHeader}>
-                    <Text style={styles.cardTitle}>{t('home.weather')}</Text>
-                    <Ionicons name={weather?.icon || 'sunny'} size={24} color="#fbc02d" />
-                </View>
-                <View style={styles.weatherRow}>
-                    <Text style={styles.temp}>{weather?.temperature || '--'}°C</Text>
-                    <View>
-                        <Text style={styles.desc}>{weather?.condition || 'Loading...'}</Text>
-                        <Text style={styles.feelsLike}>Feels like {weather?.feelsLike || '--'}°C</Text>
+                <View style={styles.glassWeatherDivider} />
+
+                <View style={styles.glassWeatherSection}>
+                    <View style={styles.glassWeatherMain}>
+                        <Ionicons name={weather?.icon || 'sunny'} size={42} color="#facc15" />
+                        <View style={styles.glassWeatherTemps}>
+                            <Text style={styles.glassTemp}>{weather?.temperature || '--'}°</Text>
+                            <Text style={styles.glassCondition}>{weather?.condition || 'Clear'}</Text>
+                        </View>
+                    </View>
+                    <View style={styles.glassWeatherMetrics}>
+                        <View style={styles.glassMetric}>
+                            <Ionicons name="water" size={16} color="#60a5fa" />
+                            <Text style={styles.glassMetricVal}>{weather?.humidity || '--'}%</Text>
+                        </View>
+                        <View style={styles.glassMetric}>
+                            <Ionicons name="umbrella" size={16} color="#94a3b8" />
+                            <Text style={styles.glassMetricVal}>{weather?.rainfall || 0}mm</Text>
+                        </View>
                     </View>
                 </View>
-                <View style={styles.weatherDetails}>
-                    <Text style={styles.weatherDetailText}><Ionicons name="water-outline" /> {weather?.humidity || '--'}% Humidity</Text>
-                    <Text style={styles.weatherDetailText}><Ionicons name="umbrella-outline" /> {weather?.rainfall || 0}mm Rain</Text>
-                </View>
             </View>
 
-            {/* Quick Actions Grid */}
-            <View style={styles.actionsGrid}>
-                {renderQuickAction('leaf-outline', t('nav.crop'), 'Crop')}
-                {renderQuickAction('school-outline', 'Educator', 'Educator')}
-                {renderQuickAction('scan-outline', 'Crop Clinic', 'CropClinic')}
-                {renderQuickAction('trending-up-outline', 'Market', 'Market')}
-                {renderQuickAction('layers-outline', t('nav.soil'), 'Soil')}
+            {/* 2. Quick-Action Tiles */}
+            <View style={styles.quickActionsContainer}>
+                {renderQuickAction('leaf', t('nav.crop') || 'Crop', 'Crop', ['#e8f5e9', '#c8e6c9'], '#2e7d32')}
+                {renderQuickAction('school', 'Educator', 'Educator', ['#e3f2fd', '#bbdefb'], '#1565c0')}
+                {renderQuickAction('scan', 'Clinic', 'CropClinic', ['#f3e5f5', '#e1bee7'], '#6a1b9a')}
+                {renderQuickAction('trending-up', 'Market', 'Market', ['#fff3e0', '#ffe0b2'], '#e65100')}
+                {renderQuickAction('water', 'Irrigate', 'Irrigation', ['#e1f5fe', '#81d4fa'], '#0277bd')}
             </View>
 
-            {/* Crop Clinic Widget */}
-            <CropClinicWidget />
+            {/* standalone CropClinicWidget removed from main dashboard per latest request */}
 
-            {/* Expert Community Widget (Replaced Tips) */}
-            <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>🤝 Expert Community</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Community')}>
-                    <Text style={styles.viewAll}>View All</Text>
-                </TouchableOpacity>
-            </View>
-
-            {communityPosts.length > 0 ? (
-                <View style={styles.communityWidgetCard}>
-                    {communityPosts.map((post, index) => (
-                        <TouchableOpacity
-                            key={post.id}
-                            style={[
-                                styles.communityWidgetRow,
-                                index === communityPosts.length - 1 && { borderBottomWidth: 0, paddingBottom: 0 }
-                            ]}
-                            onPress={() => navigation.navigate('PostDetail', { post })}
-                        >
-                            <View style={styles.communityWidgetIcon}>
-                                <Text style={styles.communityWidgetInitials}>
-                                    {post.user_name?.charAt(0)?.toUpperCase()}
-                                </Text>
-                            </View>
-                            <View style={styles.communityWidgetContent}>
-                                <Text style={styles.communityWidgetUserName}>{post.user_name}</Text>
-                                <Text numberOfLines={2} style={styles.communityWidgetQuestion}>
-                                    {post.question_text}
-                                </Text>
-                                <Text style={styles.communityWidgetReplies}>
-                                    {post.reply_count || 0} {(post.reply_count === 1) ? 'reply' : 'replies'}
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
+            {/* 3. Expert Community Section */}
+            <View style={styles.expertSectionContainer}>
+                <View style={styles.expertHeader}>
+                    <Text style={styles.expertTitle}>Expert Community</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('Community')}>
+                        <Text style={styles.expertSeeAll}>See All</Text>
+                    </TouchableOpacity>
                 </View>
-            ) : (
-                <View style={[styles.emptyAlert, { backgroundColor: '#f0f4f8' }]}>
-                    <Ionicons name="people-outline" size={40} color="#888" />
-                    <Text style={styles.emptyAlertText}>Join the discussion!</Text>
-                </View>
-            )}
 
-            {/* My Crops Section */}
-            {userCrops.length > 0 && (
-                <>
-
-
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>🌾 My Crops Live Status</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Crop')}>
-                            <Text style={styles.viewAll}>Manage</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {userCrops.map((crop, index) => {
-                        const harvestInfo = getHarvestInfo(crop.name, crop.sowingDate);
-                        const daysSinceSowing = Math.floor((new Date() - new Date(crop.sowingDate)) / (1000 * 60 * 60 * 24));
-
-                        // Determine growth stage visually
-                        const isSeedling = daysSinceSowing < 30;
-                        const iconSource = isSeedling ? Illustrations.seedling : Illustrations.vegetative;
-
-                        return (
-                            <View key={index} style={styles.cropDetailCard}>
-                                <View style={styles.cropDetailHeader}>
-                                    <View style={[styles.cropIconContainer, { backgroundColor: '#fff', overflow: 'hidden' }]}>
-                                        <Image source={iconSource} style={styles.cropIconImage} resizeMode="contain" />
-                                    </View>
-                                    <View style={styles.cropDetailInfo}>
-                                        <Text style={styles.cropDetailName}>{crop.name}</Text>
-                                        <Text style={styles.cropDetailStage}>{daysSinceSowing} days old</Text>
-                                    </View>
-                                    <TouchableOpacity
-                                        style={styles.cropEditBtn}
-                                        onPress={() => navigation.navigate('Crop')}
-                                    >
-                                        <Ionicons name="create-outline" size={20} color="#666" />
-                                    </TouchableOpacity>
-                                </View>
-
-                                <View style={styles.cropDetailStats}>
-                                    <View style={styles.harvestContainer}>
-                                        <View style={styles.harvestInfo}>
-                                            <Ionicons name="time" size={18} color="#2e7d32" />
-                                            <Text style={styles.harvestLabel}>
-                                                {harvestInfo?.type === 'continuous' ? 'First Harvest:' : 'Harvest In:'}
-                                            </Text>
-                                        </View>
-                                        <Text style={styles.harvestValue}>
-                                            {harvestInfo?.type === 'continuous'
-                                                ? `${harvestInfo.daysToFirstHarvest > 0 ? harvestInfo.daysToFirstHarvest + ' days' : 'Ready Now!'}`
-                                                : `${harvestInfo?.daysToHarvest} days`
-                                            }
-                                        </Text>
-                                    </View>
-
-                                    {/* Harvest Progress Bar */}
-                                    <View style={styles.progressBarBg}>
-                                        <View
-                                            style={[
-                                                styles.progressBarFill,
-                                                { width: `${Math.min(100, Math.max(0, (daysSinceSowing / (daysSinceSowing + (harvestInfo?.daysToHarvest || 100))) * 100))}%` }
-                                            ]}
-                                        />
-                                    </View>
-                                </View>
-                                <View style={styles.recommendationBox}>
-                                    <Ionicons name="bulb-outline" size={16} color="#f57c00" />
-                                    <Text style={styles.recommendationText}>
-                                        {getRecommendation(crop.name, crop.sowingDate)}
+                {communityPosts.length > 0 ? (
+                    <View style={styles.communityList}>
+                        {communityPosts.map((post) => (
+                            <TouchableOpacity
+                                key={post.id}
+                                style={styles.postCard}
+                                onPress={() => navigation.navigate('PostDetail', { post })}
+                                activeOpacity={0.9}
+                            >
+                                <View style={styles.postAvatar}>
+                                    <Text style={styles.postAvatarText}>
+                                        {post.user_name?.charAt(0)?.toUpperCase() || '?'}
                                     </Text>
                                 </View>
-                            </View>
-                        );
-                    })}
-                </>
-            )}
-
-            {/* Alerts Section */}
-            <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{t('home.alerts_title')}</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('AI')}>
-                    <Text style={styles.viewAll}>{t('home.view_all')}</Text>
-                </TouchableOpacity>
+                                <View style={styles.postBody}>
+                                    <View style={styles.postMetaRow}>
+                                        <Text style={styles.postAuthor}>{post.user_name}</Text>
+                                        <View style={styles.postRepliesBadge}>
+                                            <Ionicons name="chatbubble-ellipses" size={12} color="#2e7d32" />
+                                            <Text style={styles.postRepliesText}>{post.reply_count || 0}</Text>
+                                        </View>
+                                    </View>
+                                    <Text numberOfLines={2} style={styles.postSnippet}>
+                                        {post.question_text}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                ) : (
+                    <View style={styles.emptyCommunityBox}>
+                        <Ionicons name="people-circle-outline" size={48} color="#cbd5e1" />
+                        <Text style={styles.emptyCommunityText}>Start a discussion with experts!</Text>
+                    </View>
+                )}
             </View>
-
-            {alerts.length > 0 ? (
-                alerts.map((alert, index) => (
-                    <TouchableOpacity key={index} style={styles.alertCard} onPress={() => navigation.navigate('AI')}>
-                        <View style={[styles.alertStripe, { backgroundColor: getSeverityColor(alert.severity) }]} />
-                        <View style={styles.alertContent}>
-                            <View style={styles.alertHeader}>
-                                <Ionicons name={getSeverityIcon(alert.severity)} size={18} color={getSeverityColor(alert.severity)} />
-                                <Text style={[styles.alertType, { color: getSeverityColor(alert.severity) }]}>
-                                    {alert.cropName} • {alert.type}
-                                </Text>
-                            </View>
-                            <Text numberOfLines={2} style={styles.alertMsg}>{alert.message}</Text>
-                        </View>
-                    </TouchableOpacity>
-                ))
-            ) : (
-                <View style={styles.emptyAlert}>
-                    <Ionicons name="checkmark-circle-outline" size={40} color="#388e3c" />
-                    <Text style={styles.emptyAlertText}>{t('home.no_alerts')}</Text>
-                </View>
-            )}
-
-            {/* Removed bottom community widget to position it higher up over tips */}
 
             {/* Notifications Modal */}
             <Modal
@@ -457,50 +403,7 @@ const HomeScreen = () => {
                 </View>
             </Modal>
 
-            {/* Task Guide Modal */}
-            <Modal
-                animationType="fade"
-                transparent={true}
-                visible={taskGuideVisible}
-                onRequestClose={() => setTaskGuideVisible(false)}
-            >
-                <View style={styles.guideModalContainer}>
-                    <View style={styles.guideCard}>
-                        {selectedTask && (
-                            <>
-                                <Image
-                                    source={
-                                        selectedTask.type === 'watering' ? Illustrations.watering :
-                                            selectedTask.type === 'fertilizer' ? Illustrations.fertilizer :
-                                                selectedTask.type === 'harvest' ? Illustrations.harvest :
-                                                    Illustrations.vegetative
-                                    }
-                                    style={styles.guideImage}
-                                    resizeMode="cover"
-                                />
-                                <ScrollView style={styles.guideContent}>
-                                    <Text style={styles.guideTitle}>{selectedTask.task}</Text>
-                                    <Text style={styles.guideSubtitle}>For {selectedTask.cropName}</Text>
 
-                                    <View style={styles.guideSteps}>
-                                        <Text style={styles.guideStepTitle}>📋 Instructions</Text>
-                                        <Text style={styles.guideStepText}>
-                                            {selectedTask.description || "Follow standard farming practices for this task."}
-                                        </Text>
-                                    </View>
-
-                                    <TouchableOpacity
-                                        style={styles.guideCloseBtn}
-                                        onPress={() => setTaskGuideVisible(false)}
-                                    >
-                                        <Text style={styles.guideCloseText}>Close Guide</Text>
-                                    </TouchableOpacity>
-                                </ScrollView>
-                            </>
-                        )}
-                    </View>
-                </View>
-            </Modal>
         </ScrollView>
     );
 };
@@ -653,17 +556,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     actionIconBox: {
-        width: 60,
-        height: 60,
+        width: 70,
+        height: 70,
         backgroundColor: '#fff',
-        borderRadius: 15,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 8,
-        elevation: 2,
+        marginBottom: 10,
+        elevation: 3,
         shadowColor: '#000',
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.08,
         shadowOffset: { width: 0, height: 2 },
+    },
+    actionLabel: {
+        fontSize: 12,
+        color: '#555',
+        fontWeight: '600',
+        textAlign: 'center',
+        marginTop: -2,
     },
     actionLabel: {
         fontSize: 12,
@@ -1130,6 +1040,258 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#888',
         fontWeight: '500',
+    },
+    // ---- NEW PREMIUM STYLES ----
+    topGlassCard: {
+        backgroundColor: '#166534',
+        padding: 24,
+        paddingTop: 56,
+        borderBottomLeftRadius: 36,
+        borderBottomRightRadius: 36,
+        shadowColor: '#166534',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.3,
+        shadowRadius: 18,
+        elevation: 10,
+        marginBottom: 28,
+    },
+    glassHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    glassBranding: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    glassAppName: {
+        color: '#ffffff',
+        fontSize: 26,
+        fontWeight: '900',
+        letterSpacing: 0.5,
+    },
+    glassBadge: {
+        backgroundColor: '#fbbf24',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 12,
+        marginLeft: 10,
+    },
+    glassBadgeText: {
+        color: '#78350f',
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 1,
+    },
+    glassBellBtn: {
+        padding: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        borderRadius: 20,
+    },
+    glassRedDot: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        backgroundColor: '#ef4444',
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#166534',
+    },
+    glassGreetingRow: {
+        marginBottom: 24,
+    },
+    glassGreeting: {
+        color: 'rgba(255, 255, 255, 0.9)',
+        fontSize: 16,
+        marginBottom: 4,
+        fontWeight: '500',
+    },
+    glassLocation: {
+        color: '#ffffff',
+        fontSize: 22,
+        fontWeight: '700',
+    },
+    glassWeatherDivider: {
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        marginBottom: 20,
+    },
+    glassWeatherSection: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.15)',
+        padding: 16,
+        borderRadius: 24,
+    },
+    glassWeatherMain: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    glassWeatherTemps: {
+        marginLeft: 12,
+    },
+    glassTemp: {
+        color: '#ffffff',
+        fontSize: 34,
+        fontWeight: '800',
+    },
+    glassCondition: {
+        color: '#bde0fe',
+        fontSize: 14,
+        fontWeight: '600',
+        marginTop: -2,
+    },
+    glassWeatherMetrics: {
+        flexDirection: 'column',
+        justifyContent: 'center',
+    },
+    glassMetric: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 4,
+    },
+    glassMetricVal: {
+        color: '#ffffff',
+        fontSize: 14,
+        fontWeight: '600',
+        marginLeft: 8,
+    },
+    quickActionsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        paddingHorizontal: 20,
+        marginBottom: 15,
+        gap: 15,
+    },
+    quickActionTile: {
+        alignItems: 'center',
+        width: '28%',
+        marginBottom: 10,
+    },
+    quickActionIconShell: {
+        width: 64,
+        height: 64,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10,
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+    },
+    quickActionLabel: {
+        fontSize: 13,
+        color: '#334155',
+        fontWeight: '700',
+    },
+    expertSectionContainer: {
+        paddingHorizontal: 20,
+        paddingBottom: 40,
+    },
+    expertHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        marginBottom: 16,
+    },
+    expertTitle: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#1e293b',
+        letterSpacing: -0.5,
+    },
+    expertSeeAll: {
+        color: '#16a34a',
+        fontSize: 14,
+        fontWeight: '700',
+        marginBottom: 2,
+    },
+    communityList: {},
+    postCard: {
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        padding: 16,
+        marginBottom: 14,
+        flexDirection: 'row',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+    },
+    postAvatar: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+    },
+    postAvatarText: {
+        color: '#475569',
+        fontSize: 18,
+        fontWeight: '800',
+    },
+    postBody: {
+        flex: 1,
+    },
+    postMetaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    postAuthor: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: '#334155',
+    },
+    postRepliesBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0fdf4',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    postRepliesText: {
+        color: '#166534',
+        fontSize: 12,
+        fontWeight: '800',
+        marginLeft: 4,
+    },
+    postSnippet: {
+        fontSize: 14,
+        color: '#64748b',
+        lineHeight: 20,
+        fontWeight: '500',
+    },
+    emptyCommunityBox: {
+        backgroundColor: '#f8fafc',
+        borderRadius: 24,
+        padding: 32,
+        alignItems: 'center',
+        borderWidth: 2,
+        borderStyle: 'dashed',
+        borderColor: '#cbd5e1',
+    },
+    emptyCommunityText: {
+        marginTop: 12,
+        color: '#94a3b8',
+        fontSize: 15,
+        fontWeight: '700',
     }
 });
 

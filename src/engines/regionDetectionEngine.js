@@ -98,7 +98,7 @@ export const RegionDetectionEngine = {
                 source: 'default'
             };
         } catch (error) {
-            console.error('Region detection failed:', error);
+            console.warn('Region detection failed, falling back:', error.message);
 
             // Return cached or default
             try {
@@ -107,7 +107,7 @@ export const RegionDetectionEngine = {
                     return { ...JSON.parse(cached), source: 'cached' };
                 }
             } catch (e) {
-                console.error('Cache read failed:', e);
+                console.warn('Cache read failed:', e.message);
             }
 
             return {

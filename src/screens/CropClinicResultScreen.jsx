@@ -13,13 +13,15 @@ import {
     ScrollView,
     TouchableOpacity,
     Image,
+    SafeAreaView,
     Alert,
+    Modal,
+    ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { insertDiagnosis } from '../db/cropClinicSupabase';
+import { insertDiagnosis, insertOrderSummary } from '../db/cropClinicSupabase';
 import { LOW_CONFIDENCE_THRESHOLD } from '../data/cropClinicData';
 
 const CropClinicResultScreen = () => {
@@ -28,6 +30,10 @@ const CropClinicResultScreen = () => {
     const { diagnosis } = route.params;
 
     const [saved, setSaved] = useState(false);
+    const [treatmentModalVisible, setTreatmentModalVisible] = useState(false);
+    const [isPurchasing, setIsPurchasing] = useState(false);
+    const [orderSuccess, setOrderSuccess] = useState(null);
+    const [selectedSeller, setSelectedSeller] = useState(null);
 
     useEffect(() => {
         saveDiagnosis();
@@ -49,6 +55,33 @@ const CropClinicResultScreen = () => {
     const disease = diagnosis.disease;
     const treatment = diagnosis.treatment;
     const severity = diagnosis.severity;
+
+    const handleBuyTreatment = async () => {
+        if (!selectedSeller) {
+            Alert.alert("Action Required", "Please select a platform to order from.");
+            return;
+        }
+
+        setIsPurchasing(true);
+        
+        setTimeout(async () => {
+            const profile = await AsyncStorage.getItem('user-profile');
+            const userId = profile ? JSON.parse(profile).phone || 'anonymous' : 'anonymous';
+            const price = selectedSeller.price; 
+
+            const order = {
+                product_name: treatment?.pesticide || 'Organic Remedy',
+                price: price,
+                crop_name: diagnosis.matchedLabels?.[0] || 'Unknown Crop',
+                disease_name: disease?.name || 'Unknown',
+                platform: selectedSeller.name
+            };
+
+            const result = await insertOrderSummary(order, userId);
+            setIsPurchasing(false);
+            setOrderSuccess(result ? order : false);
+        }, 2000); // UI loading pause
+    };
 
     const handleScanAgain = () => {
         navigation.replace('CropClinic');
@@ -210,6 +243,11 @@ const CropClinicResultScreen = () => {
                                 <Text style={styles.emergencyText}>{treatment.emergency}</Text>
                             </View>
                         )}
+
+                        <TouchableOpacity style={styles.getTreatmentBtn} onPress={() => setTreatmentModalVisible(true)}>
+                            <Ionicons name="cart-outline" size={20} color="#fff" />
+                            <Text style={styles.getTreatmentBtnText}>Get Treatment Now</Text>
+                        </TouchableOpacity>
                     </View>
                 )}
 
@@ -273,6 +311,114 @@ const CropClinicResultScreen = () => {
                     </Text>
                 )}
             </ScrollView>
+
+            {/* Treatment Modal */}
+            <Modal visible={treatmentModalVisible} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.treatmentModal}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Order Treatment</Text>
+                            <TouchableOpacity onPress={() => { setTreatmentModalVisible(false); setOrderSuccess(null); }}>
+                                <Ionicons name="close" size={24} color="#333" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {isPurchasing ? (
+                            <View style={styles.modalLoading}>
+                                <ActivityIndicator size="large" color="#2e7d32" />
+                                <Text style={styles.modalLoadingText}>Processing your order securely...</Text>
+                            </View>
+                        ) : orderSuccess ? (
+                            <View style={styles.modalSuccess}>
+                                <Ionicons name="checkmark-circle" size={64} color="#4caf50" />
+                                <Text style={styles.modalSuccessTitle}>Order Placed Successfully!</Text>
+                                <View style={styles.receiptBox}>
+                                    <Text style={styles.receiptText}>Platform: {orderSuccess.platform}</Text>
+                                    <Text style={styles.receiptText}>Product: {orderSuccess.product_name}</Text>
+                                    <Text style={styles.receiptText}>Total Charged: ₹{orderSuccess.price}</Text>
+                                    <Text style={styles.receiptText}>Est. Delivery: 2-3 Days</Text>
+                                </View>
+                                <TouchableOpacity style={styles.doneBtn} onPress={() => setTreatmentModalVisible(false)}>
+                                    <Text style={styles.doneBtnText}>Close</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <ScrollView style={styles.modalScroll}>
+                                <Text style={styles.productRecommendedTitle}>Recommended Product</Text>
+                                <View style={styles.productCard}>
+                                    <Ionicons name="flask-outline" size={32} color="#1565c0" />
+                                    <View style={styles.productInfo}>
+                                        <Text style={styles.productName}>{treatment?.pesticide || 'Agri Med'}</Text>
+                                        <Text style={styles.productSub}>Verified authentic</Text>
+                                    </View>
+                                </View>
+
+                                <Text style={styles.productRecommendedTitle}>Available Platforms</Text>
+                                <TouchableOpacity 
+                                    style={[styles.sellerRow, selectedSeller?.name === 'AgroStar' && styles.sellerRowSelected]} 
+                                    onPress={() => setSelectedSeller({name: 'AgroStar', price: 240})}
+                                >
+                                    <View style={styles.sellerPlatform}>
+                                        <View style={[styles.platformLogoBg, { backgroundColor: '#e53935' }]}><Text style={styles.platformLogoText}>A</Text></View>
+                                        <View>
+                                            <Text style={styles.sellerName}>AgroStar</Text>
+                                            <Text style={styles.sellerDistance}>Estimated delivery: 2 Days</Text>
+                                        </View>
+                                    </View>
+                                    <Text style={styles.sellerPrice}>₹240</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    style={[styles.sellerRow, selectedSeller?.name === 'BigHaat' && styles.sellerRowSelected]} 
+                                    onPress={() => setSelectedSeller({name: 'BigHaat', price: 235})}
+                                >
+                                    <View style={styles.sellerPlatform}>
+                                        <View style={[styles.platformLogoBg, { backgroundColor: '#43a047' }]}><Text style={styles.platformLogoText}>B</Text></View>
+                                        <View>
+                                            <Text style={styles.sellerName}>BigHaat</Text>
+                                            <Text style={styles.sellerDistance}>Estimated delivery: 3 Days</Text>
+                                        </View>
+                                    </View>
+                                    <Text style={styles.sellerPrice}>₹235</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    style={[styles.sellerRow, selectedSeller?.name === 'DeHaat' && styles.sellerRowSelected]} 
+                                    onPress={() => setSelectedSeller({name: 'DeHaat', price: 245})}
+                                >
+                                    <View style={styles.sellerPlatform}>
+                                        <View style={[styles.platformLogoBg, { backgroundColor: '#1e88e5' }]}><Text style={styles.platformLogoText}>D</Text></View>
+                                        <View>
+                                            <Text style={styles.sellerName}>DeHaat</Text>
+                                            <Text style={styles.sellerDistance}>Estimated delivery: 2 Days</Text>
+                                        </View>
+                                    </View>
+                                    <Text style={styles.sellerPrice}>₹245</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    style={[styles.sellerRow, selectedSeller?.name === 'IndiaMART' && styles.sellerRowSelected]} 
+                                    onPress={() => setSelectedSeller({name: 'IndiaMART', price: 220})}
+                                >
+                                    <View style={styles.sellerPlatform}>
+                                        <View style={[styles.platformLogoBg, { backgroundColor: '#fb8c00' }]}><Text style={styles.platformLogoText}>I</Text></View>
+                                        <View>
+                                            <Text style={styles.sellerName}>IndiaMART</Text>
+                                            <Text style={styles.sellerDistance}>Bulk orders available</Text>
+                                        </View>
+                                    </View>
+                                    <Text style={styles.sellerPrice}>₹220</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.buyConfirmBtn} onPress={handleBuyTreatment}>
+                                    <Ionicons name="cart" size={20} color="#fff" />
+                                    <Text style={styles.buyConfirmBtnText}>Buy Directly</Text>
+                                </TouchableOpacity>
+                            </ScrollView>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -659,6 +805,185 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    getTreatmentBtn: {
+        backgroundColor: '#1565c0',
+        flexDirection: 'row',
+        paddingVertical: 14,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
+        gap: 8,
+    },
+    getTreatmentBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    treatmentModal: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 20,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+        borderBottomWidth: 1,
+        borderColor: '#eee',
+        paddingBottom: 15,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    modalScroll: {
+        paddingBottom: 20,
+    },
+    productRecommendedTitle: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: '#666',
+        marginTop: 15,
+        marginBottom: 10,
+    },
+    productCard: {
+        flexDirection: 'row',
+        backgroundColor: '#f3f4f6',
+        padding: 15,
+        borderRadius: 12,
+        alignItems: 'center',
+        gap: 15,
+    },
+    productInfo: {
+        flex: 1,
+    },
+    productName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    productSub: {
+        fontSize: 12,
+        color: '#1565c0',
+        marginTop: 2,
+    },
+    sellerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 10,
+        borderBottomWidth: 1,
+        borderColor: '#f0f0f0',
+        borderRadius: 8,
+    },
+    sellerRowSelected: {
+        backgroundColor: '#e8f5e9',
+        borderColor: '#2e7d32',
+        borderBottomWidth: 2,
+    },
+    sellerPlatform: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    platformLogoBg: {
+        width: 36,
+        height: 36,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    platformLogoText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    sellerName: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#333',
+    },
+    sellerDistance: {
+        fontSize: 12,
+        color: '#888',
+        marginTop: 4,
+    },
+    sellerPrice: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#2e7d32',
+    },
+    buyConfirmBtn: {
+        backgroundColor: '#2e7d32',
+        flexDirection: 'row',
+        paddingVertical: 15,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 12,
+        marginTop: 25,
+        marginBottom: 30,
+        gap: 10,
+    },
+    buyConfirmBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    modalLoading: {
+        alignItems: 'center',
+        padding: 40,
+    },
+    modalLoadingText: {
+        marginTop: 15,
+        color: '#555',
+        fontSize: 15,
+    },
+    modalSuccess: {
+        alignItems: 'center',
+        padding: 20,
+        paddingBottom: 40,
+    },
+    modalSuccessTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2e7d32',
+        marginTop: 15,
+        marginBottom: 20,
+    },
+    receiptBox: {
+        backgroundColor: '#f5f5f5',
+        padding: 15,
+        borderRadius: 10,
+        width: '100%',
+        marginBottom: 20,
+    },
+    receiptText: {
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 5,
+    },
+    doneBtn: {
+        backgroundColor: '#1565c0',
+        paddingVertical: 12,
+        paddingHorizontal: 40,
+        borderRadius: 10,
+    },
+    doneBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
     },
 });
 

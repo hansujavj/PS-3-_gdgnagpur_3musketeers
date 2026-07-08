@@ -8,7 +8,7 @@ import NetInfo from '@react-native-community/netinfo';
 const AiAssistantScreen = () => {
     const { t, i18n } = useTranslation();
     const [messages, setMessages] = useState([
-        { id: '1', text: t('ai.greeting', 'Namaste! I am AgriSahayak. How can I help your farm today?'), sender: 'bot' }
+        { id: '1', text: t('ai.greeting', 'Namaste! I am AgriChain. How can I help your farm today?'), sender: 'bot' }
     ]);
     const [inputText, setInputText] = useState('');
     const [loading, setLoading] = useState(false);
@@ -101,7 +101,7 @@ const AiAssistantScreen = () => {
             style={styles.container}
         >
             <View style={styles.header}>
-                <Text style={styles.title}>AgriSahayak AI</Text>
+                <Text style={styles.title}>AgriChain AI</Text>
                 <View style={[styles.onlineBadge, !isOnline && styles.offlineBadge]}>
                     <View style={[styles.dot, !isOnline && styles.dotOffline]} />
                     <Text style={styles.onlineText}>{isOnline ? 'Online' : 'Offline'}</Text>
@@ -119,7 +119,7 @@ const AiAssistantScreen = () => {
             {(loading || statusText) && (
                 <View style={styles.typingIndicator}>
                     <ActivityIndicator size="small" color="#2e7d32" />
-                    <Text style={styles.typingText}>{statusText || 'AgriSahayak is thinking...'}</Text>
+                    <Text style={styles.typingText}>{statusText || 'AgriChain is thinking...'}</Text>
                 </View>
             )}
 
@@ -145,7 +145,7 @@ const AiAssistantScreen = () => {
                     style={styles.input}
                     value={inputText}
                     onChangeText={setInputText}
-                    placeholder="Ask AgriSahayak..."
+                    placeholder="Ask AgriChain..."
                     placeholderTextColor="#999"
                     onSubmitEditing={() => sendMessage()}
                 />

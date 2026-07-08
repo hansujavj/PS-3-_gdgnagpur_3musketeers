@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import HomeScreen from '../screens/HomeScreen';
 import CropScreen from '../screens/CropScreen';
-import SoilScreen from '../screens/SoilScreen';
+import MarketScreen from '../screens/MarketScreen';
 import AiAssistantScreen from '../screens/AiAssistantScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
@@ -24,8 +24,8 @@ const BottomTabNavigator = () => {
                         iconName = focused ? 'home' : 'home-outline';
                     } else if (route.name === 'Crop') {
                         iconName = focused ? 'leaf' : 'leaf-outline';
-                    } else if (route.name === 'Soil') {
-                        iconName = focused ? 'layers' : 'layers-outline';
+                    } else if (route.name === 'Market') {
+                        iconName = focused ? 'trending-up' : 'trending-up-outline';
                     } else if (route.name === 'AI') {
                         iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
                     } else if (route.name === 'Settings') {
@@ -38,29 +38,28 @@ const BottomTabNavigator = () => {
                 tabBarInactiveTintColor: 'gray',
                 headerShown: false,
                 tabBarStyle: {
-                    height: 65,
-                    paddingBottom: 10,
-                    paddingTop: 5,
-                    backgroundColor: '#fff',
-                    borderTopWidth: 1,
-                    borderTopColor: '#e0e0e0',
-                    elevation: 8,
+                    height: 100,
+                    paddingBottom: 20,
+                    paddingTop: 8,
+                    backgroundColor: '#ffffff',
+                    borderTopWidth: 0,
+                    elevation: 15,
                     shadowColor: '#000',
-                    shadowOffset: { width: 0, height: -2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 3,
+                    shadowOffset: { width: 0, height: -5 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 10,
                 },
                 tabBarLabelStyle: {
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: '600',
-                    marginTop: -2,
-                    marginBottom: 2,
+                    marginTop: 4,
+                    marginBottom: 4,
                 },
                 tabBarItemStyle: {
                     paddingTop: 5,
                 },
                 tabBarIconStyle: {
-                    marginTop: 3,
+                    marginTop: 0,
                 },
             })}
         >
@@ -75,9 +74,9 @@ const BottomTabNavigator = () => {
                 options={{ title: t('nav.crop') }}
             />
             <Tab.Screen
-                name="Soil"
-                component={SoilScreen}
-                options={{ title: t('nav.soil') }}
+                name="Market"
+                component={MarketScreen}
+                options={{ title: 'Market' }}
             />
             <Tab.Screen
                 name="AI"

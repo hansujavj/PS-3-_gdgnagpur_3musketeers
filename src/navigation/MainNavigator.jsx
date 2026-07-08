@@ -8,6 +8,8 @@ import CropClinicScreen from '../screens/CropClinicScreen';
 import CropClinicResultScreen from '../screens/CropClinicResultScreen';
 import CropDetailScreen from '../screens/CropDetailScreen';
 import MarketScreen from '../screens/MarketScreen';
+import IrrigationScreen from '../screens/IrrigationScreen';
+import CropClinicHistoryScreen from '../screens/CropClinicHistoryScreen';
 
 const Stack = createStackNavigator();
 
@@ -64,6 +66,20 @@ const MainNavigator = () => {
             <Stack.Screen
                 name="Market"
                 component={MarketScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="Irrigation"
+                component={IrrigationScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="CropClinicHistory"
+                component={CropClinicHistoryScreen}
                 options={{
                     headerShown: false,
                 }}

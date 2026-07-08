@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, ScrollView, Modal, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, ScrollView, Modal, Alert, ActivityIndicator, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -8,6 +9,10 @@ import { fetchAllCrops } from '../db/cropSupabase';
 import { HarvestOrchestrator } from '../engines/harvestOrchestrator';
 
 const STORAGE_KEY = 'user-crops';
+
+const VARIETY_OPTIONS = ['Common', 'Hybrid', 'Local/Desi', 'High Yielding (HYV)', 'Genetically Modified (GM)'];
+const SOIL_OPTIONS = ['Black', 'Red', 'Alluvial', 'Laterite', 'Sandy', 'Clay'];
+const IRRIGATION_OPTIONS = ['Drip', 'Sprinkler', 'Flood', 'Rainfed', 'Manual'];
 
 const CropScreen = () => {
     const { t } = useTranslation();
@@ -95,6 +100,18 @@ const CropScreen = () => {
         return d.toISOString().split('T')[0];
     });
     const [plantAge, setPlantAge] = useState('1');
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [cropDropdownVisible, setCropDropdownVisible] = useState(false);
+    const [genericDropdownVisible, setGenericDropdownVisible] = useState(false);
+    const [dropdownType, setDropdownType] = useState(null);
+
+    const handleDateChange = (event, selectedDate) => {
+        setShowDatePicker(Platform.OS === 'ios');
+        if (selectedDate) {
+            const dateText = selectedDate.toISOString().split('T')[0];
+            handleSowingDateChange(dateText);
+        }
+    };
 
     const handleSowingDateChange = (text) => {
         setSowingDate(text);
@@ -181,17 +198,29 @@ const CropScreen = () => {
         setPlantAge('1');
     };
 
-    const calculateProgress = (sowingDate, duration) => {
+    const calculateProgress = (sowingDate, itemHarvestDate, duration) => {
         const start = new Date(sowingDate);
+        const end = itemHarvestDate ? new Date(itemHarvestDate) : new Date(start.getTime() + duration * 1000 * 60 * 60 * 24);
         const now = new Date();
-        const diffTime = Math.abs(now - start);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        const progress = Math.min((diffDays / duration), 1);
-        return { diffDays, progress };
+
+        const elapsedMs = now.getTime() - start.getTime();
+        const totalMs = end.getTime() - start.getTime();
+
+        const diffDays = Math.max(0, Math.floor(elapsedMs / (1000 * 60 * 60 * 24)));
+        const daysToHarvest = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+
+        let progress = 0;
+        if (totalMs > 0) {
+            progress = Math.min(Math.max(elapsedMs / totalMs, 0), 1);
+        } else {
+            progress = Math.min(Math.max(diffDays / duration, 0), 1);
+        }
+
+        return { diffDays, progress, daysToHarvest };
     };
 
     const renderCropItem = ({ item }) => {
-        const { diffDays, progress } = calculateProgress(item.sowingDate, item.duration);
+        const { diffDays, progress, daysToHarvest } = calculateProgress(item.sowingDate, item.harvestDate, item.duration);
 
         return (
             <TouchableOpacity
@@ -205,10 +234,12 @@ const CropScreen = () => {
                     </View>
                     <View style={styles.headerInfo}>
                         <Text style={styles.cropName}>{item.name} ({item.variety})</Text>
-                        <Text style={styles.cropDate}>Sown: {item.sowingDate} • {item.soil} Soil</Text>
+                        <Text style={styles.cropDate}>Sown: {item.sowingDate}</Text>
                     </View>
-                    <View style={styles.ageBadge}>
-                        <Text style={styles.ageText}>Day {diffDays}</Text>
+                    <View style={[styles.ageBadge, daysToHarvest > 0 ? {} : {backgroundColor: '#e8f5e9'}]}>
+                        <Text style={[styles.ageText, daysToHarvest > 0 ? {} : {color: '#2e7d32'}]}>
+                            {daysToHarvest > 0 ? `${daysToHarvest} days left` : 'Harvest Ready'}
+                        </Text>
                     </View>
                 </View>
 
@@ -317,59 +348,89 @@ const CropScreen = () => {
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <Text style={styles.inputLabel}>Select Crop Name</Text>
-                            <View style={styles.cropSearchBar}>
-                                <Ionicons name="search-outline" size={18} color="#888" />
-                                <TextInput
-                                    style={styles.cropSearchInput}
-                                    placeholder="Search crops..."
-                                    placeholderTextColor="#999"
-                                    value={cropSearch}
-                                    onChangeText={setCropSearch}
-                                />
-                                {cropSearch.length > 0 && (
-                                    <TouchableOpacity onPress={() => setCropSearch('')}>
-                                        <Ionicons name="close-circle" size={18} color="#aaa" />
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                            {cropsLoading ? (
-                                <ActivityIndicator size="small" color="#2e7d32" style={{ marginVertical: 15 }} />
-                            ) : (
-                                <View style={styles.chipContainer}>
-                                    {filteredCrops.map(crop => (
-                                        <TouchableOpacity
-                                            key={crop.id}
-                                            style={[styles.chip, newCropName === crop.crop_name && styles.chipSelected]}
-                                            onPress={() => setNewCropName(crop.crop_name)}
-                                        >
-                                            <Text style={[styles.chipText, newCropName === crop.crop_name && styles.chipTextSelected]}>
-                                                {crop.crop_name}
-                                            </Text>
+                            <TouchableOpacity 
+                                style={styles.dropdownSelector} 
+                                onPress={() => setCropDropdownVisible(true)}
+                            >
+                                <Text style={styles.dropdownSelectorText}>
+                                    {newCropName || "Choose a Crop..."}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color="#888" />
+                            </TouchableOpacity>
+
+                            <Modal visible={cropDropdownVisible} transparent animationType="fade" onRequestClose={() => setCropDropdownVisible(false)}>
+                                <View style={styles.modalOverlay}>
+                                    <View style={styles.dropdownModalBox}>
+                                        <Text style={styles.dropdownTitle}>Select Crop</Text>
+                                        <View style={styles.cropSearchBar}>
+                                            <Ionicons name="search-outline" size={18} color="#888" />
+                                            <TextInput
+                                                style={styles.cropSearchInput}
+                                                placeholder="Search crops..."
+                                                placeholderTextColor="#999"
+                                                value={cropSearch}
+                                                onChangeText={setCropSearch}
+                                            />
+                                        </View>
+                                        {cropsLoading ? (
+                                            <ActivityIndicator size="small" color="#2e7d32" style={{ marginVertical: 15 }} />
+                                        ) : (
+                                            <FlatList
+                                                data={filteredCrops}
+                                                keyExtractor={item => item.id}
+                                                style={{ maxHeight: 300 }}
+                                                renderItem={({ item }) => (
+                                                    <TouchableOpacity 
+                                                        style={styles.dropdownItem} 
+                                                        onPress={() => {
+                                                            setNewCropName(item.crop_name);
+                                                            setCropDropdownVisible(false);
+                                                            setCropSearch('');
+                                                        }}
+                                                    >
+                                                        <Text style={styles.dropdownItemText}>{item.crop_name}</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                                ListEmptyComponent={<Text style={{ color: '#999', padding: 10 }}>No crops match.</Text>}
+                                            />
+                                        )}
+                                        <TouchableOpacity style={styles.closeDropdownBtn} onPress={() => setCropDropdownVisible(false)}>
+                                            <Text style={{color: '#fff', fontWeight: 'bold'}}>Close</Text>
                                         </TouchableOpacity>
-                                    ))}
-                                    {filteredCrops.length === 0 && (
-                                        <Text style={{ color: '#999', padding: 10 }}>No crops match your search</Text>
-                                    )}
+                                    </View>
                                 </View>
-                            )}
+                            </Modal>
 
                             <Text style={styles.inputLabel}>Variety (Common/Hybrid)</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={variety}
-                                onChangeText={setVariety}
-                                placeholder="e.g. Lokwan, Hybrid 406"
-                            />
+                            <TouchableOpacity 
+                                style={styles.dropdownSelector} 
+                                onPress={() => { setDropdownType('variety'); setGenericDropdownVisible(true); }}
+                            >
+                                <Text style={styles.dropdownSelectorText}>
+                                    {variety || "Select Variety..."}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color="#888" />
+                            </TouchableOpacity>
 
                             <View style={styles.row}>
                                 <View style={styles.halfInput}>
-                                    <Text style={styles.inputLabel}>Start Date (YYYY-MM-DD)</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={sowingDate}
-                                        onChangeText={handleSowingDateChange}
-                                        placeholder="YYYY-MM-DD"
-                                    />
+                                    <Text style={styles.inputLabel}>Start Date (Sown)</Text>
+                                    <TouchableOpacity 
+                                        style={styles.dateSelectorBtn} 
+                                        onPress={() => setShowDatePicker(true)}
+                                    >
+                                        <Ionicons name="calendar-outline" size={18} color="#666" />
+                                        <Text style={styles.dateSelectorText}>{sowingDate}</Text>
+                                    </TouchableOpacity>
+                                    {showDatePicker && (
+                                        <DateTimePicker
+                                            value={new Date(sowingDate)}
+                                            mode="date"
+                                            display="default"
+                                            onChange={handleDateChange}
+                                            maximumDate={new Date()}
+                                        />
+                                    )}
                                 </View>
                                 <View style={styles.halfInput}>
                                     <Text style={styles.inputLabel}>Or Plant Age (Days)</Text>
@@ -383,31 +444,67 @@ const CropScreen = () => {
                                 </View>
                             </View>
 
-                            <View style={styles.row}>
-                                <View style={styles.halfInput}>
-                                    <Text style={styles.inputLabel}>Soil Type</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={soilType}
-                                        onChangeText={setSoilType}
-                                        placeholder="e.g. Black"
-                                    />
-                                </View>
-                                <View style={styles.halfInput}>
-                                    <Text style={styles.inputLabel}>Irrigation</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={irrigation}
-                                        onChangeText={setIrrigation}
-                                        placeholder="e.g. Drip"
-                                    />
-                                </View>
-                            </View>
+                            <Text style={styles.inputLabel}>Soil Type</Text>
+                            <TouchableOpacity 
+                                style={styles.dropdownSelector} 
+                                onPress={() => { setDropdownType('soil'); setGenericDropdownVisible(true); }}
+                            >
+                                <Text style={styles.dropdownSelectorText}>
+                                    {soilType || "Select Soil Type..."}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color="#888" />
+                            </TouchableOpacity>
+
+                            <Text style={styles.inputLabel}>Irrigation Method</Text>
+                            <TouchableOpacity 
+                                style={styles.dropdownSelector} 
+                                onPress={() => { setDropdownType('irrigation'); setGenericDropdownVisible(true); }}
+                            >
+                                <Text style={styles.dropdownSelectorText}>
+                                    {irrigation || "Select Irrigation..."}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color="#888" />
+                            </TouchableOpacity>
 
                             <TouchableOpacity style={styles.submitButton} onPress={addCrop}>
                                 <Text style={styles.submitButtonText}>Start Crop Journey</Text>
                             </TouchableOpacity>
                         </ScrollView>
+
+                        {/* Generic Dropdown Modal for Soil/Irrigation/Variety */}
+                        <Modal visible={genericDropdownVisible} transparent animationType="fade" onRequestClose={() => setGenericDropdownVisible(false)}>
+                            <View style={styles.modalOverlay}>
+                                <View style={styles.dropdownModalBox}>
+                                    <Text style={styles.dropdownTitle}>
+                                        {dropdownType === 'variety' ? 'Select Variety' : dropdownType === 'soil' ? 'Select Soil Type' : 'Select Irrigation'}
+                                    </Text>
+                                    <FlatList
+                                        data={
+                                            dropdownType === 'variety' ? VARIETY_OPTIONS :
+                                            dropdownType === 'soil' ? SOIL_OPTIONS :
+                                            IRRIGATION_OPTIONS
+                                        }
+                                        keyExtractor={item => item}
+                                        renderItem={({ item }) => (
+                                            <TouchableOpacity 
+                                                style={styles.dropdownItem} 
+                                                onPress={() => {
+                                                    if (dropdownType === 'variety') setVariety(item);
+                                                    else if (dropdownType === 'soil') setSoilType(item);
+                                                    else if (dropdownType === 'irrigation') setIrrigation(item);
+                                                    setGenericDropdownVisible(false);
+                                                }}
+                                            >
+                                                <Text style={styles.dropdownItemText}>{item}</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    />
+                                    <TouchableOpacity style={styles.closeDropdownBtn} onPress={() => setGenericDropdownVisible(false)}>
+                                        <Text style={{color: '#fff', fontWeight: 'bold'}}>Close</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </Modal>
                     </View>
                 </View>
             </Modal>
@@ -693,6 +790,68 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#333',
         lineHeight: 17,
+    },
+    dropdownSelector: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#f9f9f9',
+        borderWidth: 1,
+        borderColor: '#eee',
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 15,
+    },
+    dropdownSelectorText: {
+        fontSize: 16,
+        color: '#333',
+    },
+    dropdownModalBox: {
+        backgroundColor: '#fff',
+        width: '90%',
+        alignSelf: 'center',
+        borderRadius: 15,
+        padding: 20,
+        elevation: 5,
+        maxHeight: '80%',
+        marginTop: '30%',
+    },
+    dropdownTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    dropdownItem: {
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    dropdownItemText: {
+        fontSize: 16,
+        color: '#333',
+        textAlign: 'center',
+    },
+    closeDropdownBtn: {
+        backgroundColor: '#2e7d32',
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    dateSelectorBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f9f9f9',
+        borderWidth: 1,
+        borderColor: '#eee',
+        borderRadius: 10,
+        padding: 12,
+        gap: 8,
+    },
+    dateSelectorText: {
+        fontSize: 16,
+        color: '#333',
     },
 });
 

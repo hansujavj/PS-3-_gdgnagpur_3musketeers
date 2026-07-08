@@ -19,7 +19,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
     TextInput, ActivityIndicator, Alert, ScrollView,
-    RefreshControl, Linking, Platform
+    RefreshControl, Linking, Platform, Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,19 +38,28 @@ const TABS = [
     { key: 'compensation', label: 'Compensation', icon: 'cash-outline' },
 ];
 
+const SCHEME_CATEGORIES = [
+    { id: 'all', label: 'All Categories', value: null },
+    { id: 'crop_disease', label: 'Disease Control', value: 'crop_disease' },
+    { id: 'insurance', label: 'Crop Insurance', value: 'insurance' },
+    { id: 'equipment', label: 'Farm Equipment', value: 'equipment' },
+    { id: 'general', label: 'General Welfare', value: 'general' },
+];
+
+const INDIAN_STATES = [
+    'All India', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya',
+    'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim',
+    'Tamil Nadu', 'Telangana', 'Tripura', 'Uttarakhand', 'Uttar Pradesh',
+    'West Bengal', 'Delhi',
+];
+
 // ─── State extraction helper ──────────────────────────────────────────────────
 const extractState = (address) => {
     if (!address) return null;
-    const indianStates = [
-        'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-        'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-        'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya',
-        'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim',
-        'Tamil Nadu', 'Telangana', 'Tripura', 'Uttarakhand', 'Uttar Pradesh',
-        'West Bengal', 'Delhi',
-    ];
     const addrLower = address.toLowerCase();
-    return indianStates.find(s => addrLower.includes(s.toLowerCase())) || null;
+    return INDIAN_STATES.find(s => s !== 'All India' && addrLower.includes(s.toLowerCase())) || null;
 };
 
 const EducatorScreen = ({ navigation }) => {
@@ -70,6 +79,11 @@ const EducatorScreen = ({ navigation }) => {
 
     // State filter
     const [userState, setUserState] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+
+    // Filter Visibility
+    const [stateModalVisible, setStateModalVisible] = useState(false);
+    const [categoryModalVisible, setCategoryModalVisible] = useState(false);
 
     // Expanded card tracking
     const [expandedId, setExpandedId] = useState(null);
@@ -94,15 +108,16 @@ const EducatorScreen = ({ navigation }) => {
     // ── Initial data load ─────────────────────────────────────────────────────
     useEffect(() => {
         loadAllData();
-    }, [userState]);
+    }, [userState, selectedCategory]);
 
     const loadAllData = useCallback(async () => {
         setError(null);
         setLoading(true);
         try {
+            const stateForQuery = userState === 'All India' ? null : userState;
             const [diseasesData, schemesData, compensationData] = await Promise.all([
                 fetchDiseases(),
-                fetchSchemesByState(userState),
+                fetchSchemesByState(stateForQuery, selectedCategory),
                 fetchCompensation(),
             ]);
             setDiseases(diseasesData);
@@ -115,7 +130,7 @@ const EducatorScreen = ({ navigation }) => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [userState]);
+    }, [userState, selectedCategory]);
 
     // ── Debounced search ──────────────────────────────────────────────────────
     const handleSearch = (text) => {
@@ -359,9 +374,9 @@ const EducatorScreen = ({ navigation }) => {
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
                     <Text style={styles.headerTitle}>📚 Farmer's Help Desk</Text>
-                    {userState && (
+                    {activeTab === 'schemes' && (
                         <Text style={styles.headerSubtitle}>
-                            📍 Showing schemes for {userState}
+                            📍 {userState ? `Location: ${userState}` : 'Selecting location...'}
                         </Text>
                     )}
                 </View>
@@ -377,12 +392,51 @@ const EducatorScreen = ({ navigation }) => {
                     value={searchQuery}
                     onChangeText={handleSearch}
                 />
-                {searchQuery.length > 0 && (
+                {searchQuery.length > 0 ? (
                     <TouchableOpacity onPress={() => handleSearch('')}>
                         <Ionicons name="close-circle" size={20} color="#aaa" />
                     </TouchableOpacity>
-                )}
+                ) : activeTab === 'schemes' ? (
+                    <TouchableOpacity onPress={() => setStateModalVisible(true)}>
+                        <Ionicons name="options-outline" size={20} color="#2e7d32" />
+                    </TouchableOpacity>
+                ) : null}
             </View>
+
+            {/* Scheme Filters (only on schemes tab) */}
+            {activeTab === 'schemes' && (
+                <View style={styles.filterRow}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
+                        <TouchableOpacity
+                            style={[styles.filterChip, styles.locationChip]}
+                            onPress={() => setStateModalVisible(true)}
+                        >
+                            <Ionicons name="location" size={14} color="#2e7d32" />
+                            <Text style={styles.filterChipText}>{userState || 'Select State'}</Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.filterDivider} />
+
+                        {SCHEME_CATEGORIES.map((cat) => (
+                            <TouchableOpacity
+                                key={cat.id}
+                                style={[
+                                    styles.filterChip,
+                                    selectedCategory === cat.value && styles.filterChipActive
+                                ]}
+                                onPress={() => setSelectedCategory(cat.value)}
+                            >
+                                <Text style={[
+                                    styles.filterChipText,
+                                    selectedCategory === cat.value && styles.filterChipTextActive
+                                ]}>
+                                    {cat.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+            )}
 
             {/* Tabs */}
             <View style={styles.tabBar}>
@@ -456,6 +510,33 @@ const EducatorScreen = ({ navigation }) => {
                     }
                 />
             )}
+            {/* Modals for filtering */}
+            <Modal visible={stateModalVisible} transparent animationType="slide" onRequestClose={() => setStateModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select State</Text>
+                            <TouchableOpacity onPress={() => setStateModalVisible(false)}>
+                                <Ionicons name="close" size={24} color="#333" />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={INDIAN_STATES}
+                            keyExtractor={item => item}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.modalItem}
+                                    onPress={() => { setUserState(item); setStateModalVisible(false); }}
+                                >
+                                    <Text style={[styles.modalItemText, userState === item && styles.modalItemTextActive]}>{item}</Text>
+                                    {userState === item && <Ionicons name="checkmark-circle" size={20} color="#2e7d32" />}
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
         </SafeAreaView>
     );
 };
@@ -560,6 +641,95 @@ const styles = StyleSheet.create({
     emptyBox: { alignItems: 'center', paddingTop: 60 },
     emptyTitle: { fontSize: 16, fontWeight: 'bold', color: '#555', marginTop: 12, marginBottom: 4 },
     emptyMsg: { fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 20, paddingHorizontal: 20 },
+
+    // Filters
+    filterRow: {
+        marginBottom: 12,
+        paddingHorizontal: 4,
+    },
+    filterScrollContent: {
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        gap: 8,
+    },
+    filterChip: {
+        backgroundColor: '#fff',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    locationChip: {
+        borderColor: '#2e7d32',
+        backgroundColor: '#e8f5e9',
+    },
+    filterChipActive: {
+        backgroundColor: '#2e7d32',
+        borderColor: '#2e7d32',
+    },
+    filterChipText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#666',
+    },
+    filterChipTextActive: {
+        color: '#fff',
+    },
+    filterDivider: {
+        width: 1,
+        height: 20,
+        backgroundColor: '#ddd',
+        marginHorizontal: 4,
+    },
+
+    // Modals
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        height: '70%',
+        paddingTop: 20,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    modalItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f8f8f8',
+    },
+    modalItemText: {
+        fontSize: 16,
+        color: '#444',
+    },
+    modalItemTextActive: {
+        color: '#2e7d32',
+        fontWeight: 'bold',
+    },
 });
 
 export default EducatorScreen;

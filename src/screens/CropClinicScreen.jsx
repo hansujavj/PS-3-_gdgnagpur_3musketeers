@@ -15,8 +15,9 @@ import {
     ActivityIndicator,
     Alert,
     ScrollView,
+    SafeAreaView,
+    Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import CropClinicEngine from '../engines/cropClinicEngine';
@@ -26,6 +27,8 @@ const CropClinicScreen = () => {
     const [imageUri, setImageUri] = useState(null);
     const [loading, setLoading] = useState(false);
     const [loadingText, setLoadingText] = useState('');
+    const [droneModalVisible, setDroneModalVisible] = useState(false);
+    const [droneStatus, setDroneStatus] = useState('searching'); // searching, found, connected
 
     const handleScan = async (source) => {
         setLoading(true);
@@ -55,6 +58,27 @@ const CropClinicScreen = () => {
         }
     };
 
+    const handleDroneScan = () => {
+        setDroneStatus('searching');
+        setDroneModalVisible(true);
+
+        // Simulate 2 seconds of searching for nearby Wi-Fi telemetry
+        setTimeout(() => {
+            setDroneStatus('found');
+        }, 2500);
+    };
+
+    const handleConnectDrone = () => {
+        setDroneStatus('connected');
+        // Once connected, seamlessly transition to capturing the feed (mocked by picking gallery image)
+        setTimeout(() => {
+            setDroneModalVisible(false);
+            setTimeout(() => {
+                handleScan('gallery');
+            }, 500);
+        }, 2000);
+    };
+
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -67,7 +91,9 @@ const CropClinicScreen = () => {
                         <Ionicons name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Crop Clinic</Text>
-                    <View style={{ width: 40 }} />
+                    <TouchableOpacity onPress={() => navigation.navigate('CropClinicHistory')}>
+                        <Ionicons name="time-outline" size={24} color="#fff" />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Illustration / Preview */}
@@ -129,6 +155,15 @@ const CropClinicScreen = () => {
                             <Ionicons name="images-outline" size={24} color="#2e7d32" />
                             <Text style={styles.galleryBtnText}>Choose from Gallery</Text>
                         </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.droneBtn}
+                            onPress={handleDroneScan}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="airplane" size={24} color="#1565c0" />
+                            <Text style={styles.droneBtnText}>Scan with Drone</Text>
+                        </TouchableOpacity>
                     </View>
                 ) : (
                     <View style={styles.loadingContainer}>
@@ -148,6 +183,46 @@ const CropClinicScreen = () => {
                     </Text>
                 </View>
             </ScrollView>
+            <Modal visible={droneModalVisible} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.droneModalBox}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Drone Telemetry</Text>
+                            <TouchableOpacity onPress={() => setDroneModalVisible(false)}>
+                                <Ionicons name="close" size={24} color="#333" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {droneStatus === 'searching' && (
+                            <View style={styles.droneStatusArea}>
+                                <ActivityIndicator size="large" color="#1565c0" />
+                                <Text style={styles.droneStatusTitle}>Scanning for nearby drones...</Text>
+                                <Text style={styles.droneStatusSub}>Please ensure your drone is powered on and transmitting over Agri-Fi.</Text>
+                            </View>
+                        )}
+
+                        {droneStatus === 'found' && (
+                            <View style={styles.droneStatusArea}>
+                                <Ionicons name="airplane" size={60} color="#2e7d32" />
+                                <Text style={[styles.droneStatusTitle, { color: '#2e7d32' }]}>DJI Agras T40 Found!</Text>
+                                <Text style={styles.droneStatusSub}>Signal Strength: Excellent (98%)</Text>
+
+                                <TouchableOpacity style={styles.connectDeviceBtn} onPress={handleConnectDrone}>
+                                    <Text style={styles.connectDeviceBtnText}>Connect & Stream</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {droneStatus === 'connected' && (
+                            <View style={styles.droneStatusArea}>
+                                <Ionicons name="checkmark-circle" size={60} color="#1565c0" />
+                                <Text style={[styles.droneStatusTitle, { color: '#1565c0' }]}>Connected Successfully</Text>
+                                <Text style={styles.droneStatusSub}>Initializing aerial camera feed...</Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -302,7 +377,23 @@ const styles = StyleSheet.create({
     galleryBtnText: {
         color: '#2e7d32',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: 'bold',
+    },
+    droneBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        borderRadius: 12,
+        backgroundColor: '#e3f2fd',
+        borderWidth: 2,
+        borderColor: '#bbdefb',
+        gap: 8,
+    },
+    droneBtnText: {
+        color: '#1565c0',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     loadingContainer: {
         alignItems: 'center',
@@ -334,6 +425,62 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#e65100',
         lineHeight: 20,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    droneModalBox: {
+        width: '100%',
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 20,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    droneStatusArea: {
+        alignItems: 'center',
+        paddingVertical: 20,
+    },
+    droneStatusTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1565c0',
+        marginTop: 15,
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    droneStatusSub: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 25,
+    },
+    connectDeviceBtn: {
+        backgroundColor: '#2e7d32',
+        paddingVertical: 14,
+        paddingHorizontal: 40,
+        borderRadius: 12,
+        width: '100%',
+        alignItems: 'center',
+    },
+    connectDeviceBtnText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 

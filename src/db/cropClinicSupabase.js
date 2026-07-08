@@ -57,6 +57,21 @@
  *     ON storage.objects FOR SELECT
  *     USING (bucket_id = 'diagnosis-images');
  *
+ * -- Create clinic orders table
+ * CREATE TABLE clinic_orders (
+ *     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+ *     user_id TEXT NOT NULL,
+ *     crop_name TEXT,
+ *     disease_name TEXT,
+ *     product_name TEXT NOT NULL,
+ *     price NUMERIC(10, 2),
+ *     status TEXT DEFAULT 'Processing' CHECK (status IN ('Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled')),
+ *     created_at TIMESTAMPTZ DEFAULT NOW()
+ * );
+ * CREATE INDEX idx_orders_user_id ON clinic_orders(user_id);
+ * ALTER TABLE clinic_orders ENABLE ROW LEVEL SECURITY;
+ * CREATE POLICY "Users can view own orders" ON clinic_orders FOR SELECT USING (true);
+ * CREATE POLICY "Users can insert own orders" ON clinic_orders FOR INSERT WITH CHECK (true);
  * -------------------------------------------------------
  */
 
@@ -128,7 +143,6 @@ export const insertDiagnosis = async (diagnosis, userId) => {
         const record = {
             user_id: userId,
             disease_name: diagnosis.disease?.name || 'Unknown',
-            disease_id: diagnosis.disease?.id || 'unknown',
             confidence: parseFloat((diagnosis.confidence || 0).toFixed(4)),
             severity: diagnosis.severity?.level || 'Low',
             pesticide: diagnosis.treatment?.pesticide || null,
@@ -234,5 +248,65 @@ export const deleteDiagnosis = async (diagnosisId) => {
     } catch (err) {
         console.warn('deleteDiagnosis failed:', err.message);
         return false;
+    }
+};
+
+/**
+ * Insert an order summary for treatment products.
+ * @param {Object} order - Order details containing product_name, price, crop_name, disease_name.
+ * @param {string} userId - User identifier.
+ * @returns {Object|null} Inserted order record.
+ */
+export const insertOrderSummary = async (order, userId) => {
+    try {
+        const record = {
+            user_id: userId,
+            product_name: order.product_name,
+            price: order.price,
+            crop_name: order.crop_name || 'Unknown',
+            disease_name: order.disease_name || 'Unknown',
+            status: 'Processing',
+        };
+
+        const { data, error } = await supabase
+            .from('clinic_orders')
+            .insert([record])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Insert order error:', error.message);
+            return null;
+        }
+
+        return data; // Returns the full row including generated UUID and timestamp
+    } catch (err) {
+        console.error('insertOrderSummary failed:', err.message);
+        return null;
+    }
+};
+
+/**
+ * Fetch clinic order history for a user.
+ * @param {string} userId - User identifier.
+ * @returns {Array} Order records.
+ */
+export const getOrderHistory = async (userId) => {
+    try {
+        const { data, error } = await supabase
+            .from('clinic_orders')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.warn('Fetch orders error:', error.message);
+            return [];
+        }
+
+        return data || [];
+    } catch (err) {
+        console.warn('getOrderHistory failed:', err.message);
+        return [];
     }
 };

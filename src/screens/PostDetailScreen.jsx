@@ -9,7 +9,6 @@ import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
     TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Alert
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchPostReplies, insertCommunityReply } from '../db/communitySupabase';
@@ -212,6 +211,9 @@ const PostDetailScreen = ({ route, navigation }) => {
         </SafeAreaView>
     );
 };
+
+// React Navigation implicitly wraps SafeAreas but it's good practice
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const styles = StyleSheet.create({
     container: {

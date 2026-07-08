@@ -16,12 +16,14 @@ import {
     KeyboardAvoidingView, Platform,
 } from 'react-native';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 import { insertFarmDetails } from '../db/supabase';
 import { convertToHectares, AREA_UNITS, SOIL_TYPES_LIST } from '../utils/farmUtils';
+import { detectSoilFromImage } from '../engines/soilDetectionEngine';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -71,6 +73,7 @@ const FarmDetailsScreen = ({ onFarmSetupComplete }) => {
     // Soil
     const [soilType, setSoilType] = useState('');
     const [soilModalVisible, setSoilModalVisible] = useState(false);
+    const [scanningSoil, setScanningSoil] = useState(false);
 
     // Save
     const [saving, setSaving] = useState(false);
@@ -115,6 +118,42 @@ const FarmDetailsScreen = ({ onFarmSetupComplete }) => {
     const handleManualSoilSelect = (type) => {
         setSoilType(type);
         setSoilModalVisible(false);
+    };
+
+    const handleCameraScan = async () => {
+        setSoilModalVisible(false);
+        try {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission needed', 'Camera permission is required to scan soil.');
+                return;
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.5,
+                base64: true,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                setScanningSoil(true);
+                const base64Img = result.assets[0].base64;
+                try {
+                    const aiResult = await detectSoilFromImage(base64Img);
+                    setSoilType(aiResult.soil_type);
+                    Alert.alert('Soil Detected', `Identified as: ${aiResult.soil_type}\nHealth: ${aiResult.health}`);
+                } catch (apiError) {
+                    Alert.alert('Analysis Failed', apiError.message || 'Could not analyze the soil image. Try again.');
+                } finally {
+                    setScanningSoil(false);
+                }
+            }
+        } catch (error) {
+            console.error('Camera error:', error);
+            Alert.alert('Error', 'Failed to open camera or process image.');
+        }
     };
 
     // ── Save ──────────────────────────────────────────────────
@@ -285,12 +324,17 @@ const FarmDetailsScreen = ({ onFarmSetupComplete }) => {
                         </View>
                     )}
 
-                    <TouchableOpacity style={styles.scanButton} onPress={() => setSoilModalVisible(true)}>
-                        <Ionicons name="list" size={20} color="#fff" />
-                        <Text style={styles.scanButtonText}>
-                            {soilType ? 'Change Soil Type' : 'Select Soil Type'}
-                        </Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                        <TouchableOpacity style={[styles.scanButton, { flex: 1 }]} onPress={handleCameraScan} disabled={scanningSoil}>
+                            {scanningSoil ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={20} color="#fff" />}
+                            <Text style={styles.scanButtonText}>{scanningSoil ? 'Scanning' : 'Scan'}</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity style={[styles.scanButton, { flex: 1, backgroundColor: '#558b2f' }]} onPress={() => setSoilModalVisible(true)} disabled={scanningSoil}>
+                            <Ionicons name="list" size={20} color="#fff" />
+                            <Text style={styles.scanButtonText}>Manual</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Section 4: Save & Continue */}

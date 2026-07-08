@@ -66,10 +66,11 @@ const KNOWLEDGE_BASE = {
 // Delay to simulate AI "thinking" if offline
 const SIMULATE_DELAY = 800;
 
-// Gemini API Configuration
-// NOTE: Replace with your actual Gemini API Key
-const GEMINI_API_KEY = "AIzaSyCDAJSotv9yEcVfvc_g3oRstsS6B6s9KUA";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+// OpenAI API Configuration
+import Constants from 'expo-constants';
+
+const OPENAI_API_KEY = Constants.expoConfig?.extra?.OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
+const OPENAI_URL = `https://api.openai.com/v1/chat/completions`;
 
 export const AiAssistantEngine = {
     /**
@@ -87,32 +88,42 @@ export const AiAssistantEngine = {
             return lang === 'hi' ? "यह पत्ता स्वस्थ लग रहा है, लेकिन हल्का पीलापन नाइट्रोजन की कमी का संकेत हो सकता है।" : "This leaf looks mostly healthy, but slight yellowing suggests Nitrogen deficiency. Apply Urea.";
         }
 
-        // 2. Try Online (Gemini API)
+        // 2. Try Online (OpenAI API)
         try {
+            if (!OPENAI_API_KEY) throw new Error("OPENAI API KEY MISSING");
+
             // Construct prompt based on language
             const systemPrompt = lang === 'hi'
-                ? "आप एक किसान सहायक 'एग्री सहायक' हैं। हिंदी में उत्तर दें। बहुत ही सरल और संक्षिप्त रखें।"
-                : "You are 'Agri Sahayak', a farming assistant. Answer efficiently and simply.";
+                ? "आप एक किसान सहायक 'एग्री चेन' (AgriChain) हैं। हिंदी में उत्तर दें। बहुत ही सरल और संक्षिप्त रखें।"
+                : "You are 'AgriChain', a farming assistant. Answer efficiently and simply.";
 
             const payload = {
-                contents: [{
-                    parts: [{
-                        text: `${systemPrompt} User asks: ${query}`
-                    }]
-                }]
+                model: 'gpt-4o',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: query }
+                ],
+                max_tokens: 300,
+                temperature: 0.3
             };
 
-            const response = await fetch(GEMINI_URL, {
+            const response = await fetch(OPENAI_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                },
                 body: JSON.stringify(payload)
             });
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
-                    return data.candidates[0].content.parts[0].text;
+                if (data.choices && data.choices.length > 0) {
+                    return data.choices[0].message.content.trim();
                 }
+            } else {
+                const err = await response.text();
+                console.warn('OpenAI error:', err);
             }
         } catch (error) {
             console.log("Offline or API Error, falling back to local DB:", error);

@@ -76,15 +76,21 @@ export const fetchSchemes = async (relatedTo = null) => {
  * Fetch schemes filtered by user's state.
  * state_applicable is TEXT[]; we match if it contains the state OR 'All India'.
  */
-export const fetchSchemesByState = async (userState) => {
-    if (!userState) return fetchSchemes();
-
-    const { data, error } = await supabase
+export const fetchSchemesByState = async (userState, relatedTo = null) => {
+    let query = supabase
         .from('government_schemes')
         .select('*')
-        .or(`state_applicable.cs.{${userState}},state_applicable.cs.{All India}`)
         .order('scheme_name', { ascending: true });
 
+    if (userState) {
+        query = query.or(`state_applicable.cs.{${userState}},state_applicable.cs.{All India}`);
+    }
+
+    if (relatedTo) {
+        query = query.eq('related_to', relatedTo);
+    }
+
+    const { data, error } = await query;
     if (error) {
         console.error('fetchSchemesByState error:', error);
         throw new Error(error.message);
