@@ -7,7 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:vercel": "node build-vercel.js"
+    "build:vercel": "node build-vercel.js",
+    "build": "node build-vercel.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
