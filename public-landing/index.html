@@ -4,12 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="AgriChain - Connecting farmers, buyers, and logistics for a transparent, trustable, and traceable agricultural supply chain.">
-    <title>AgriChain - Empowering Agriculture through Traceability & Trust</title>
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <title>AgriChain App</title>
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="index.css">
@@ -19,180 +14,27 @@
     <div class="bg-glow bg-glow-1"></div>
     <div class="bg-glow bg-glow-2"></div>
 
-    <!-- Navigation Header -->
-    <header class="navbar" id="main-header">
-        <div class="navbar-container">
-            <a href="#" class="logo" id="nav-logo">
-                <svg viewBox="0 0 24 24" class="logo-icon" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="logo-text">AgriChain</span>
-            </a>
+    <!-- Main Container wrapping the iPhone Mockup -->
+    <main class="app-container">
+        <div class="iphone-mockup" id="phone-container">
+            <!-- Dynamic Island Notch -->
+            <div class="dynamic-island"></div>
             
-            <nav class="nav-menu" id="nav-menu-links">
-                <a href="#home" class="nav-link active">Home</a>
-                <div class="dropdown">
-                    <a href="#features" class="nav-link dropdown-toggle">Features 
-                        <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </a>
-                </div>
-                <div class="dropdown">
-                    <a href="#solutions" class="nav-link dropdown-toggle">Solutions
-                        <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </a>
-                </div>
-                <a href="#farmers" class="nav-link">Farmers</a>
-                <a href="#investors" class="nav-link">Investors</a>
-                <a href="#about" class="nav-link">About</a>
-                <a href="#blog" class="nav-link">Blog</a>
-                <a href="#contact" class="nav-link">Contact</a>
-            </nav>
-            
-            <div class="nav-actions">
-                <a href="#login" class="btn btn-outline" id="btn-login">Log In</a>
-                <a href="#get-started" class="btn btn-solid" id="btn-get-started">Get Started</a>
+            <!-- Side Buttons -->
+            <div class="side-button volume-up"></div>
+            <div class="side-button volume-down"></div>
+            <div class="side-button action-btn"></div>
+            <div class="side-button power-btn"></div>
+
+            <!-- Screen Frame -->
+            <div class="iphone-screen">
+                <!-- Embedded React Native Web App -->
+                <iframe src="/app/" title="AgriChain Mobile App Demonstration" class="app-iframe" id="app-demo-iframe" loading="lazy"></iframe>
             </div>
+
+            <!-- Speaker grill & camera dots in notch -->
+            <div class="camera-lens"></div>
         </div>
-    </header>
-
-    <!-- Hero Content -->
-    <section class="hero-section">
-        <div class="hero-header-wrap">
-            <h1 class="hero-title">Empowering Agriculture Through Traceability and Trust.</h1>
-        </div>
-
-        <main class="grid-container">
-            <!-- Left Column: Solution & Key Features -->
-            <div class="column left-column">
-                <article class="card glassmorphism-card" id="card-solution">
-                    <h2 class="card-title">The AgriChain Solution</h2>
-                    <p class="card-text">
-                        Connecting farmers, buyers, and logistics for a transparent supply chain. Track grain, verify soil quality, and automate fair trade from farm to market.
-                    </p>
-                </article>
-
-                <article class="card glassmorphism-card" id="card-features">
-                    <h2 class="card-title">Key Features</h2>
-                    <ul class="feature-list">
-                        <li class="feature-item">
-                            <span class="icon-wrap">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </span>
-                            <div class="feature-info">
-                                <h3>Farmer Portal</h3>
-                                <p>Manage crops, check advisory services, and calculate market profits.</p>
-                            </div>
-                        </li>
-                        <li class="feature-item">
-                            <span class="icon-wrap">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 4L12 14.01l-3-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </span>
-                            <div class="feature-info">
-                                <h3>Traceability</h3>
-                                <p>Provide end-to-end QR code tracking of crop provenance and safety.</p>
-                            </div>
-                        </li>
-                        <li class="feature-item">
-                            <span class="icon-wrap">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </span>
-                            <div class="feature-info">
-                                <h3>Logistics Tracking</h3>
-                                <p>Monitor shipments with real-time temperature, spoilage risks, and status.</p>
-                            </div>
-                        </li>
-                        <li class="feature-item">
-                            <span class="icon-wrap">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><path d="M12 18h.01M8 18h.01M16 18h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </span>
-                            <div class="feature-info">
-                                <h3>Smart Payments</h3>
-                                <p>Instant secure settlement through localized payment rails.</p>
-                            </div>
-                        </li>
-                    </ul>
-                </article>
-            </div>
-
-            <!-- Center Column: Dynamic Web App inside CSS iPhone Mockup -->
-            <div class="column center-column phone-mockup-column">
-                <div class="iphone-mockup" id="phone-container">
-                    <!-- Dynamic Island Notch -->
-                    <div class="dynamic-island"></div>
-                    
-                    <!-- Side Buttons -->
-                    <div class="side-button volume-up"></div>
-                    <div class="side-button volume-down"></div>
-                    <div class="side-button action-btn"></div>
-                    <div class="side-button power-btn"></div>
-
-                    <!-- Screen Frame -->
-                    <div class="iphone-screen">
-                        <!-- Embedded React Native Web App -->
-                        <iframe src="/app/" title="AgriChain Mobile App Demonstration" class="app-iframe" id="app-demo-iframe" loading="lazy"></iframe>
-                    </div>
-
-                    <!-- Speaker grill & camera dots in notch -->
-                    <div class="camera-lens"></div>
-                </div>
-            </div>
-
-            <!-- Right Column: Impact & Download -->
-            <div class="column right-column">
-                <article class="card glassmorphism-card" id="card-impact">
-                    <h2 class="card-title">Impact</h2>
-                    <ul class="impact-list">
-                        <li class="impact-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            <span>Increased Income</span>
-                        </li>
-                        <li class="impact-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            <span>Reduced Waste</span>
-                        </li>
-                        <li class="impact-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            <span>Quality Assurance</span>
-                        </li>
-                    </ul>
-                </article>
-
-                <article class="card glassmorphism-card" id="card-download">
-                    <h2 class="card-title">Download Now</h2>
-                    <div class="download-buttons">
-                        <!-- App Store Badge -->
-                        <a href="#download-ios" class="download-badge" id="badge-app-store">
-                            <svg viewBox="0 0 135 40" class="badge-svg">
-                                <rect width="135" height="40" rx="6" fill="#000000" stroke="#a3a3a3" stroke-width="0.8"/>
-                                <path d="M21.5 25.4c-.1 2.3 2 3.4 2.1 3.5-.1.3-.4 1.1-.9 1.9-.5.7-1 1.4-1.8 1.4-.8 0-1-.5-1.9-.5s-1.1.5-1.9.5c-.7 0-1.3-.7-1.8-1.4-1-1.5-1.8-4.2-1.8-6.9 0-4.3 2.8-6.6 5.5-6.6 1.4 0 2.2.8 2.8.8.6 0 1.6-.9 3.2-.8.7 0 2.6.2 3.8 2-0.1.1-2.3 1.3-2.3 4.1zm-2.8-9.4c.8-.9 1.3-2.2 1.1-3.4-1.1.1-2.4.7-3.1 1.6-.7.7-1.2 2-1 3.2 1.2.1 2.3-.5 3-1.4z" fill="#ffffff"/>
-                                <text x="38" y="16" fill="#ffffff" font-family="Inter, sans-serif" font-size="7" font-weight="600">Download on the</text>
-                                <text x="38" y="29" fill="#ffffff" font-family="Outfit, sans-serif" font-size="13" font-weight="700">App Store</text>
-                            </svg>
-                        </a>
-                        <!-- Google Play Badge -->
-                        <a href="#download-android" class="download-badge" id="badge-google-play">
-                            <svg viewBox="0 0 135 40" class="badge-svg">
-                                <rect width="135" height="40" rx="6" fill="#000000" stroke="#a3a3a3" stroke-width="0.8"/>
-                                <path d="M14.5 10.5v19c0 .6.4 1 1 1 .2 0 .4-.1.5-.2l9.8-9.3-9.8-9.3c-.1-.1-.3-.2-.5-.2-.6 0-1 .4-1 1zm11.7 8.7l2.8-2.6-13-7.4 10.2 10zm1.7 1.3L16 27.9l11.9-6.7-1.7-1.4zm2.1-.8l2.9-1.7c.4-.2.4-.7 0-.9l-2.9-1.7-2.1 2.1 2.1 2.2z" fill="#ffffff"/>
-                                <text x="38" y="16" fill="#ffffff" font-family="Inter, sans-serif" font-size="6.5" font-weight="600">GET IT ON</text>
-                                <text x="38" y="29" fill="#ffffff" font-family="Outfit, sans-serif" font-size="13" font-weight="700">Google Play</text>
-                            </svg>
-                        </a>
-                    </div>
-                </article>
-            </div>
-        </main>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-container">
-            <p class="copyright">Copyright &copy; 2026 AgriChain Pvt. Ltd.</p>
-            <div class="footer-links">
-                <a href="#privacy" class="footer-link">Privacy</a>
-                <a href="#terms" class="footer-link">Terms</a>
-            </div>
-        </div>
-    </footer>
+    </main>
 </body>
 </html>
